@@ -29,12 +29,17 @@ const FeeList = () => {
     fine: '',
     sports: '',
     other: '',
-    class: ''
+    class: '',
+    paid: false,
   });
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [classFilter, setClassFilter] = useState('');
+  const [monthFilter, setMonthFilter] = useState('');
+  const [yearFilter, setYearFilter] = useState('');
+  const [paidFilter, setPaidFilter] = useState('');
   const [modalIsOpen, setIsOpen] = useState(false);
+  const [totalPaidAmount, setTotalPaidAmount] = useState(0);
 
   useEffect(() => {
     const unsubscribe = onSnapshot(collection(db, 'fees'), (snapshot) => {
@@ -45,6 +50,16 @@ const FeeList = () => {
     return () => unsubscribe();
   }, []);
 
+  useEffect(() => {
+    const paidAmount = fees.reduce((total, fee) => {
+      if (fee.paid) {
+        return total + (parseFloat(fee.amount || 0) + parseFloat(fee.fine || 0) + parseFloat(fee.sports || 0) + parseFloat(fee.other || 0));
+      }
+      return total;
+    }, 0);
+    setTotalPaidAmount(paidAmount);
+  }, [fees]);
+
   const handleDelete = async (id) => {
     await deleteDoc(doc(db, 'fees', id));
   };
@@ -52,29 +67,38 @@ const FeeList = () => {
   const handleEdit = (fee) => {
     setEditingId(fee.id);
     setEditData(fee);
-    setIsOpen(true); // Open modal
+    setIsOpen(true);
   };
 
   const handleUpdate = async (e) => {
     e.preventDefault();
     await updateDoc(doc(db, 'fees', editingId), editData);
     setEditingId(null);
-    setIsOpen(false); // Close modal
+    setIsOpen(false);
   };
 
-  // Filter fees based on search term and class filter
-  const filteredFees = fees.filter(fee =>
-    fee.studentId.toLowerCase().includes(searchTerm.toLowerCase()) &&
-    (classFilter === '' || fee.class === classFilter)
-  );
+  const handlePaid = async (id) => {
+    const feeDoc = doc(db, 'fees', id);
+    const fee = fees.find(f => f.id === id);
+    await updateDoc(feeDoc, { paid: !fee.paid });
+  };
 
-  // Calculate totals
+  const filteredFees = fees.filter(fee => {
+    const feeDate = new Date(fee.date);
+    return (
+      fee.studentId.toLowerCase().includes(searchTerm.toLowerCase()) &&
+      (classFilter === '' || fee.class === classFilter) &&
+      (monthFilter === '' || (feeDate.getMonth() + 1).toString() === monthFilter) &&
+      (yearFilter === '' || feeDate.getFullYear().toString() === yearFilter) &&
+      (paidFilter === '' || fee.paid.toString() === paidFilter)
+    );
+  });
+
   const totalAmount = filteredFees.reduce((total, fee) => total + parseFloat(fee.amount || 0), 0);
   const totalFine = filteredFees.reduce((total, fee) => total + parseFloat(fee.fine || 0), 0);
   const totalSports = filteredFees.reduce((total, fee) => total + parseFloat(fee.sports || 0), 0);
   const totalOther = filteredFees.reduce((total, fee) => total + parseFloat(fee.other || 0), 0);
 
-  // Calculate overall total
   const overallTotal = filteredFees.reduce((total, fee) => {
     return total + (parseFloat(fee.amount || 0) + parseFloat(fee.fine || 0) + parseFloat(fee.sports || 0) + parseFloat(fee.other || 0));
   }, 0);
@@ -94,26 +118,11 @@ const FeeList = () => {
 
   return (
     <div className="min-h-screen bg-gray-100 p-6">
-      <style>
-        {`
-          @media print {
-            #cards {
-              display: flex;
-              flex-wrap: wrap;
-            }
-            #cards > div {
-              flex: 1 0 30%;
-              box-sizing: border-box;
-              margin: 5px;
-            }
-          }
-        `}
-      </style>
       <div className="max-w-7xl mx-auto">
         <h1 className="text-3xl font-bold mb-6">Fee List</h1>
         <div className="bg-white p-6 rounded-lg shadow">
           {loading ? (
-            <Skeleton height={100} count={6} className='mb-4' />
+            <Skeleton height={100} count={6} className="mb-4" />
           ) : (
             <>
               <input
@@ -130,6 +139,29 @@ const FeeList = () => {
                 onChange={(e) => setClassFilter(e.target.value)}
                 className="p-2 border border-gray-300 rounded mb-6 w-full"
               />
+              <input
+                type="number"
+                placeholder="Filter by Month"
+                value={monthFilter}
+                onChange={(e) => setMonthFilter(e.target.value)}
+                className="p-2 border border-gray-300 rounded mb-6 w-full"
+              />
+              <input
+                type="number"
+                placeholder="Filter by Year"
+                value={yearFilter}
+                onChange={(e) => setYearFilter(e.target.value)}
+                className="p-2 border border-gray-300 rounded mb-6 w-full"
+              />
+              <select
+                value={paidFilter}
+                onChange={(e) => setPaidFilter(e.target.value)}
+                className="p-2 border border-gray-300 rounded mb-6 w-full"
+              >
+                <option value="">Filter by Paid Status</option>
+                <option value="true">Paid</option>
+                <option value="false">Unpaid</option>
+              </select>
               <button
                 onClick={handlePrintAll}
                 className="bg-green-500 text-white px-3 py-2 rounded mb-6"
@@ -143,11 +175,12 @@ const FeeList = () => {
                 <p>Total Sports: Rs {totalSports}</p>
                 <p>Total Other: Rs {totalOther}</p>
                 <p>Overall Total: Rs {overallTotal}</p>
+                <p>Total Paid Amount: Rs {totalPaidAmount}</p>
               </div>
               <div id="cards" className="flex flex-wrap -m-4 mt-6">
                 {filteredFees.map((fee) => (
                   <div key={fee.id} className="w-full sm:w-1/2 md:w-1/3 p-4">
-                    <div className="bg-white p-6 rounded-lg shadow-md border-l-4 border-blue-500">
+                    <div className={`bg-white p-6 rounded-lg shadow-md border-l-4 ${fee.paid ? 'border-green-500' : 'border-blue-500'}`}>
                       <h2 className="text-xl font-bold mb-2">Student ID: {fee.studentId}</h2>
                       <p className="text-gray-700">Amount: Rs {fee.amount}</p>
                       <p className="text-gray-700">Date: {fee.date}</p>
@@ -155,6 +188,7 @@ const FeeList = () => {
                       <p className="text-gray-700">Sports: Rs {fee.sports}</p>
                       <p className="text-gray-700">Other: Rs {fee.other}</p>
                       <p className="text-gray-700">Class: {fee.class}</p>
+                      <p className="text-gray-700">Total: Rs {parseFloat(fee.amount || 0) + parseFloat(fee.fine || 0) + parseFloat(fee.sports || 0) + parseFloat(fee.other || 0)}</p>
                       <div className="flex justify-between mt-4">
                         <button
                           onClick={() => handleEdit(fee)}
@@ -167,6 +201,12 @@ const FeeList = () => {
                           className="bg-red-500 text-white px-3 py-2 rounded"
                         >
                           Delete
+                        </button>
+                        <button
+                          onClick={() => handlePaid(fee.id)}
+                          className={`px-3 py-2 rounded ${fee.paid ? 'bg-green-500' : 'bg-yellow-500'} text-white`}
+                        >
+                          {fee.paid ? 'Unpaid' : 'Paid'}
                         </button>
                       </div>
                     </div>
@@ -186,83 +226,70 @@ const FeeList = () => {
       >
         <h2 className="text-2xl font-bold mb-4">Edit Fee</h2>
         <form onSubmit={handleUpdate}>
-          <div className="mb-4">
-            <label className="block text-gray-700">Student ID</label>
+          <label className="block mb-2">Student ID:</label>
+          <input
+            type="text"
+            value={editData.studentId}
+            onChange={(e) => setEditData({ ...editData, studentId: e.target.value })}
+            className="p-2 border border-gray-300 rounded mb-4 w-full"
+          />
+          <label className="block mb-2">Amount:</label>
+          <input
+            type="text"
+            value={editData.amount}
+            onChange={(e) => setEditData({ ...editData, amount: e.target.value })}
+            className="p-2 border border-gray-300 rounded mb-4 w-full"
+          />
+          <label className="block mb-2">Date:</label>
+          <input
+            type="date"
+            value={editData.date}
+            onChange={(e) => setEditData({ ...editData, date: e.target.value })}
+            className="p-2 border border-gray-300 rounded mb-4 w-full"
+          />
+          <label className="block mb-2">Fine:</label>
+          <input
+            type="text"
+            value={editData.fine}
+            onChange={(e) => setEditData({ ...editData, fine: e.target.value })}
+            className="p-2 border border-gray-300 rounded mb-4 w-full"
+          />
+          <label className="block mb-2">Sports:</label>
+          <input
+            type="text"
+            value={editData.sports}
+            onChange={(e) => setEditData({ ...editData, sports: e.target.value })}
+            className="p-2 border border-gray-300 rounded mb-4 w-full"
+          />
+          <label className="block mb-2">Other:</label>
+          <input
+            type="text"
+            value={editData.other}
+            onChange={(e) => setEditData({ ...editData, other: e.target.value })}
+            className="p-2 border border-gray-300 rounded mb-4 w-full"
+          />
+          <label className="block mb-2">Class:</label>
+          <input
+            type="text"
+            value={editData.class}
+            onChange={(e) => setEditData({ ...editData, class: e.target.value })}
+            className="p-2 border border-gray-300 rounded mb-4 w-full"
+          />
+          <label className="block mb-2">
             <input
-              type="text"
-              name="studentId"
-              value={editData.studentId}
-              onChange={(e) => setEditData({ ...editData, studentId: e.target.value })}
-              className="w-full px-3 py-2 border rounded"
-              required
+              type="checkbox"
+              checked={editData.paid}
+              onChange={(e) => setEditData({ ...editData, paid: e.target.checked })}
             />
-          </div>
-          <div className="mb-4">
-            <label className="block text-gray-700">Amount</label>
-            <input
-              type="number"
-              name="amount"
-              value={editData.amount}
-              onChange={(e) => setEditData({ ...editData, amount: e.target.value })}
-              className="w-full px-3 py-2 border rounded"
-              required
-            />
-          </div>
-          <div className="mb-4">
-            <label className="block text-gray-700">Date</label>
-            <input
-              type="date"
-              name="date"
-              value={editData.date}
-              onChange={(e) => setEditData({ ...editData, date: e.target.value })}
-              className="w-full px-3 py-2 border rounded"
-              required
-            />
-          </div>
-          <div className="mb-4">
-            <label className="block text-gray-700">Fine</label>
-            <input
-              type="number"
-              name="fine"
-              value={editData.fine}
-              onChange={(e) => setEditData({ ...editData, fine: e.target.value })}
-              className="w-full px-3 py-2 border rounded"
-            />
-          </div>
-          <div className="mb-4">
-            <label className="block text-gray-700">Sports</label>
-            <input
-              type="number"
-              name="sports"
-              value={editData.sports}
-              onChange={(e) => setEditData({ ...editData, sports: e.target.value })}
-              className="w-full px-3 py-2 border rounded"
-            />
-          </div>
-          <div className="mb-4">
-            <label className="block text-gray-700">Other</label>
-            <input
-              type="number"
-              name="other"
-              value={editData.other}
-              onChange={(e) => setEditData({ ...editData, other: e.target.value })}
-              className="w-full px-3 py-2 border rounded"
-            />
-          </div>
-          <div className="mb-4">
-            <label className="block text-gray-700">Class</label>
-            <input
-              type="text"
-              name="class"
-              value={editData.class}
-              onChange={(e) => setEditData({ ...editData, class: e.target.value })}
-              className="w-full px-3 py-2 border rounded"
-              required
-            />
-          </div>
-          <div className="flex justify-end">
-            <button type="submit" className="bg-blue-500 text-white px-3 py-2 rounded mr-2">Save</button>
-            <button onClick={closeModal} className="bg-gray-500 text-white px-3 py-2 rounded">Cancel</button>
+            Paid
+          </label>
+          <div className="flex justify-end mt-4">
+            <button type="submit" className="bg-blue-500 text-white px-3 py-2 rounded mr-2">
+              Save
+            </button>
+            <button type="button" onClick={closeModal} className="bg-gray-500 text-white px-3 py-2 rounded">
+              Cancel
+            </button>
           </div>
         </form>
       </Modal>

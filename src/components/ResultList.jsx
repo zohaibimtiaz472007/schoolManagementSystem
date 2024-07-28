@@ -18,6 +18,7 @@ const ResultList = () => {
     class: "",
     obtainedMarks: 0,
     totalMarks: 0,
+    percentage: 0,
   });
 
   const [searchStudentId, setSearchStudentId] = useState("");
@@ -25,7 +26,17 @@ const ResultList = () => {
 
   useEffect(() => {
     const unsubscribe = onSnapshot(collection(db, "results"), (snapshot) => {
-      setResults(snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })));
+      const resultsWithPercentage = snapshot.docs.map((doc) => {
+        const data = doc.data();
+        const obtainedMarks = Object.values(data.marks).reduce(
+          (acc, mark) => acc + Number(mark),
+          0
+        );
+        const totalMarks = data.totalMarks;
+        const percentage = totalMarks ? (obtainedMarks / totalMarks) * 100 : 0;
+        return { id: doc.id, ...data, obtainedMarks, percentage };
+      });
+      setResults(resultsWithPercentage);
       setLoading(false);
     });
 
@@ -47,9 +58,13 @@ const ResultList = () => {
       (acc, mark) => acc + Number(mark),
       0
     );
+    const percentage = editData.totalMarks
+      ? (totalMarks / editData.totalMarks) * 100
+      : 0;
     await updateDoc(doc(db, "results", editingId), {
       ...editData,
       obtainedMarks: totalMarks,
+      percentage,
     });
     setEditingId(null);
   };
@@ -148,6 +163,9 @@ const ResultList = () => {
                       <h3 className="text-lg font-bold">
                         Obtained Marks: {result.obtainedMarks}
                       </h3>
+                      <h3 className="text-lg font-bold">
+                        Percentage: {result.percentage.toFixed(2)}%
+                      </h3>
                     </div>
                     <div>
                       <h3 className="text-lg font-bold mb-2">Marks</h3>
@@ -228,38 +246,21 @@ const ResultList = () => {
                     onChange={(e) =>
                       setEditData({
                         ...editData,
-                        marks: { ...editData.marks, [subject]: e.target.value },
+                        marks: {
+                          ...editData.marks,
+                          [subject]: e.target.value,
+                        },
                       })
                     }
                     className="flex-grow px-3 py-2 border rounded"
                   />
                 </div>
               ))}
-              <div className="flex flex-wrap mb-4">
-                <label className="block text-gray-700 w-32">Total Marks</label>
-                <input
-                  type="number"
-                  name="totalMarks"
-                  value={editData.totalMarks}
-                  readOnly
-                  className="flex-grow px-3 py-2 border rounded bg-gray-100"
-                />
-              </div>
-              <div className="flex flex-wrap mb-4">
-                <label className="block text-gray-700 w-32">Obtained Marks</label>
-                <input
-                  type="number"
-                  name="obtainedMarks"
-                  value={editData.obtainedMarks}
-                  readOnly
-                  className="flex-grow px-3 py-2 border rounded bg-gray-100"
-                />
-              </div>
               <div className="flex justify-end">
                 <button
                   type="button"
                   onClick={() => setEditingId(null)}
-                  className="bg-gray-500 text-white px-4 py-2 rounded mr-2"
+                  className="mr-2 bg-gray-300 text-gray-700 px-4 py-2 rounded"
                 >
                   Cancel
                 </button>
