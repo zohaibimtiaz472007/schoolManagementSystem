@@ -3,6 +3,7 @@ import { db } from '../firebase/Config';
 import { collection, onSnapshot, deleteDoc, doc, updateDoc } from 'firebase/firestore';
 import Skeleton from 'react-loading-skeleton';
 import 'react-loading-skeleton/dist/skeleton.css';
+import toast from 'react-hot-toast';
 
 const StudentList = () => {
   const [students, setStudents] = useState([]);
@@ -20,6 +21,7 @@ const StudentList = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [searchClass, setSearchClass] = useState('');
   const [searchAddress, setSearchAddress] = useState('');
+  const [searchRollNo, setSearchRollNo] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   useEffect(() => {
@@ -35,6 +37,7 @@ const StudentList = () => {
 
   const handleDelete = async (id) => {
     await deleteDoc(doc(db, 'students', id));
+    toast.success('Record deleted successfully');
   };
 
   const handleEdit = (student) => {
@@ -47,13 +50,15 @@ const StudentList = () => {
     e.preventDefault();
     await updateDoc(doc(db, 'students', editingId), editData);
     setEditingId(null);
+    toast.success('Record updated successfully');
     setIsModalOpen(false);
   };
 
   const filteredStudents = students.filter(student =>
     student.name.toLowerCase().includes(searchTerm.toLowerCase()) &&
     student.class.toLowerCase().includes(searchClass.toLowerCase()) &&
-    student.address.toLowerCase().includes(searchAddress.toLowerCase())
+    student.address.toLowerCase().includes(searchAddress.toLowerCase()) &&
+    student.rollNo.toLowerCase().includes(searchRollNo.toLowerCase())
   );
 
   const groupedStudents = filteredStudents.reduce((groups, student) => {
@@ -70,7 +75,7 @@ const StudentList = () => {
       <div className="max-w-7xl mx-auto">
         <h1 className="text-3xl font-bold mb-6">Student List</h1>
         <div className="bg-white p-6 rounded-lg shadow">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
+          <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 mb-4">
             <input
               type="text"
               placeholder="Search by name..."
@@ -90,6 +95,13 @@ const StudentList = () => {
               placeholder="Search by address..."
               value={searchAddress}
               onChange={(e) => setSearchAddress(e.target.value)}
+              className="w-full p-2 border border-gray-300 rounded"
+            />
+            <input
+              type="text"
+              placeholder="Search by roll number..."
+              value={searchRollNo}
+              onChange={(e) => setSearchRollNo(e.target.value)}
               className="w-full p-2 border border-gray-300 rounded"
             />
           </div>

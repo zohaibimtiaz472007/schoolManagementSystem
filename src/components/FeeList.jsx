@@ -4,6 +4,7 @@ import { collection, onSnapshot, deleteDoc, doc, updateDoc } from 'firebase/fire
 import Skeleton from 'react-loading-skeleton';
 import Modal from 'react-modal';
 import 'react-loading-skeleton/dist/skeleton.css';
+import toast from 'react-hot-toast';
 
 // Custom styles for Modal
 const customStyles = {
@@ -16,6 +17,13 @@ const customStyles = {
     transform: 'translate(-50%, -50%)',
     borderRadius: '10px',
     padding: '20px',
+    maxWidth: '90%',
+    width: '400px',
+    maxHeight: '90vh',
+    overflowY: 'auto',
+  },
+  overlay: {
+    backgroundColor: 'rgba(0, 0, 0, 0.75)',
   },
 };
 
@@ -62,6 +70,7 @@ const FeeList = () => {
 
   const handleDelete = async (id) => {
     await deleteDoc(doc(db, 'fees', id));
+    toast.success('Fee deleted successfully');
   };
 
   const handleEdit = (fee) => {
@@ -74,6 +83,7 @@ const FeeList = () => {
     e.preventDefault();
     await updateDoc(doc(db, 'fees', editingId), editData);
     setEditingId(null);
+    toast.success('Fee updated successfully');
     setIsOpen(false);
   };
 
@@ -188,8 +198,10 @@ const FeeList = () => {
                       <p className="text-gray-700">Sports: Rs {fee.sports}</p>
                       <p className="text-gray-700">Other: Rs {fee.other}</p>
                       <p className="text-gray-700">Class: {fee.class}</p>
-                      <p className="text-gray-700">Total: Rs {parseFloat(fee.amount || 0) + parseFloat(fee.fine || 0) + parseFloat(fee.sports || 0) + parseFloat(fee.other || 0)}</p>
-                      <div className="flex justify-between mt-4">
+                      <p className={`text-lg font-bold mt-4 ${fee.paid ? 'text-green-500' : 'text-red-500'}`}>
+                        {fee.paid ? 'Paid' : 'Unpaid'}
+                      </p>
+                      <div className="mt-4 flex space-x-2">
                         <button
                           onClick={() => handleEdit(fee)}
                           className="bg-blue-500 text-white px-3 py-2 rounded"
@@ -204,9 +216,9 @@ const FeeList = () => {
                         </button>
                         <button
                           onClick={() => handlePaid(fee.id)}
-                          className={`px-3 py-2 rounded ${fee.paid ? 'bg-green-500' : 'bg-yellow-500'} text-white`}
+                          className={`px-3 py-2 rounded ${fee.paid ? 'bg-green-500' : 'bg-gray-500'} text-white`}
                         >
-                          {fee.paid ? 'Unpaid' : 'Paid'}
+                          {fee.paid ? 'Paid' : 'Unpaid'}
                         </button>
                       </div>
                     </div>
@@ -217,79 +229,90 @@ const FeeList = () => {
           )}
         </div>
       </div>
-
-      <Modal
-        isOpen={modalIsOpen}
-        onRequestClose={closeModal}
-        style={customStyles}
-        contentLabel="Edit Fee Modal"
-      >
+      <Modal isOpen={modalIsOpen} onRequestClose={closeModal} style={customStyles} contentLabel="Edit Fee Modal">
         <h2 className="text-2xl font-bold mb-4">Edit Fee</h2>
         <form onSubmit={handleUpdate}>
-          <label className="block mb-2">Student ID:</label>
-          <input
-            type="text"
-            value={editData.studentId}
-            onChange={(e) => setEditData({ ...editData, studentId: e.target.value })}
-            className="p-2 border border-gray-300 rounded mb-4 w-full"
-          />
-          <label className="block mb-2">Amount:</label>
-          <input
-            type="text"
-            value={editData.amount}
-            onChange={(e) => setEditData({ ...editData, amount: e.target.value })}
-            className="p-2 border border-gray-300 rounded mb-4 w-full"
-          />
-          <label className="block mb-2">Date:</label>
-          <input
-            type="date"
-            value={editData.date}
-            onChange={(e) => setEditData({ ...editData, date: e.target.value })}
-            className="p-2 border border-gray-300 rounded mb-4 w-full"
-          />
-          <label className="block mb-2">Fine:</label>
-          <input
-            type="text"
-            value={editData.fine}
-            onChange={(e) => setEditData({ ...editData, fine: e.target.value })}
-            className="p-2 border border-gray-300 rounded mb-4 w-full"
-          />
-          <label className="block mb-2">Sports:</label>
-          <input
-            type="text"
-            value={editData.sports}
-            onChange={(e) => setEditData({ ...editData, sports: e.target.value })}
-            className="p-2 border border-gray-300 rounded mb-4 w-full"
-          />
-          <label className="block mb-2">Other:</label>
-          <input
-            type="text"
-            value={editData.other}
-            onChange={(e) => setEditData({ ...editData, other: e.target.value })}
-            className="p-2 border border-gray-300 rounded mb-4 w-full"
-          />
-          <label className="block mb-2">Class:</label>
-          <input
-            type="text"
-            value={editData.class}
-            onChange={(e) => setEditData({ ...editData, class: e.target.value })}
-            className="p-2 border border-gray-300 rounded mb-4 w-full"
-          />
-          <label className="block mb-2">
-            <input
-              type="checkbox"
-              checked={editData.paid}
-              onChange={(e) => setEditData({ ...editData, paid: e.target.checked })}
-            />
-            Paid
-          </label>
-          <div className="flex justify-end mt-4">
-            <button type="submit" className="bg-blue-500 text-white px-3 py-2 rounded mr-2">
-              Save
-            </button>
-            <button type="button" onClick={closeModal} className="bg-gray-500 text-white px-3 py-2 rounded">
-              Cancel
-            </button>
+          <div className="flex flex-wrap -m-2">
+            <div className="p-2 w-full sm:w-1/2">
+              <label className="block text-gray-700">Student ID</label>
+              <input
+                type="text"
+                value={editData.studentId}
+                onChange={(e) => setEditData({ ...editData, studentId: e.target.value })}
+                className="p-2 border border-gray-300 rounded w-full"
+                required
+              />
+            </div>
+            <div className="p-2 w-full sm:w-1/2">
+              <label className="block text-gray-700">Amount</label>
+              <input
+                type="number"
+                value={editData.amount}
+                onChange={(e) => setEditData({ ...editData, amount: e.target.value })}
+                className="p-2 border border-gray-300 rounded w-full"
+                required
+              />
+            </div>
+            <div className="p-2 w-full sm:w-1/2">
+              <label className="block text-gray-700">Date</label>
+              <input
+                type="date"
+                value={editData.date}
+                onChange={(e) => setEditData({ ...editData, date: e.target.value })}
+                className="p-2 border border-gray-300 rounded w-full"
+                required
+              />
+            </div>
+            <div className="p-2 w-full sm:w-1/2">
+              <label className="block text-gray-700">Fine</label>
+              <input
+                type="number"
+                value={editData.fine}
+                onChange={(e) => setEditData({ ...editData, fine: e.target.value })}
+                className="p-2 border border-gray-300 rounded w-full"
+              />
+            </div>
+            <div className="p-2 w-full sm:w-1/2">
+              <label className="block text-gray-700">Sports</label>
+              <input
+                type="number"
+                value={editData.sports}
+                onChange={(e) => setEditData({ ...editData, sports: e.target.value })}
+                className="p-2 border border-gray-300 rounded w-full"
+              />
+            </div>
+            <div className="p-2 w-full sm:w-1/2">
+              <label className="block text-gray-700">Other</label>
+              <input
+                type="number"
+                value={editData.other}
+                onChange={(e) => setEditData({ ...editData, other: e.target.value })}
+                className="p-2 border border-gray-300 rounded w-full"
+              />
+            </div>
+            <div className="p-2 w-full sm:w-1/2">
+              <label className="block text-gray-700">Class</label>
+              <input
+                type="text"
+                value={editData.class}
+                onChange={(e) => setEditData({ ...editData, class: e.target.value })}
+                className="p-2 border border-gray-300 rounded w-full"
+              />
+            </div>
+            <div className="p-2 w-full">
+              <label className="block text-gray-700">Paid</label>
+              <input
+                type="checkbox"
+                checked={editData.paid}
+                onChange={(e) => setEditData({ ...editData, paid: e.target.checked })}
+                className="mr-2"
+              />
+              <span>{editData.paid ? 'Paid' : 'Unpaid'}</span>
+            </div>
+          </div>
+          <div className="mt-4 flex justify-end">
+            <button type="submit" className="bg-blue-500 text-white px-4 py-2 rounded mr-2">Save</button>
+            <button type="button" onClick={closeModal} className="bg-gray-500 text-white px-4 py-2 rounded">Cancel</button>
           </div>
         </form>
       </Modal>

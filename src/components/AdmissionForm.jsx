@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { db } from '../firebase/Config';
-import { collection, addDoc } from 'firebase/firestore';
+import { collection, addDoc, getDocs } from 'firebase/firestore';
 import toast from 'react-hot-toast';
 
 const AdmissionForm = () => {
@@ -14,6 +14,18 @@ const AdmissionForm = () => {
     parentContact: ''
   });
 
+  const [existingRollNos, setExistingRollNos] = useState([]);
+  const [rollNoError, setRollNoError] = useState(false);
+
+  useEffect(() => {
+    const fetchRollNos = async () => {
+      const querySnapshot = await getDocs(collection(db, 'students'));
+      const rollNos = querySnapshot.docs.map(doc => doc.data().rollNo);
+      setExistingRollNos(rollNos);
+    };
+    fetchRollNos();
+  }, []);
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData({ ...formData, [name]: value });
@@ -21,17 +33,24 @@ const AdmissionForm = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    await addDoc(collection(db, 'students'), formData);
-    toast.success("Student Added Successfully");
-    setFormData({
-      name: '',
-      age: '',
-      class: '',
-      address: '',
-      rollNo: '',
-      parentName: '',
-      parentContact: ''
-    });
+    if (existingRollNos.includes(formData.rollNo)) {
+      setRollNoError(true);
+      toast.error("Roll Number already exists");
+    } else {
+      await addDoc(collection(db, 'students'), formData);
+      toast.success("Student Added Successfully");
+      setFormData({
+        name: '',
+        age: '',
+        class: '',
+        address: '',
+        rollNo: '',
+        parentName: '',
+        parentContact: ''
+      });
+      setRollNoError(false);
+      setExistingRollNos([...existingRollNos, formData.rollNo]); // Add new roll number to the list
+    }
   };
 
   return (
@@ -90,9 +109,13 @@ const AdmissionForm = () => {
               name="rollNo"
               required
               value={formData.rollNo}
-              onChange={handleChange}
-              className="w-full p-2 border border-gray-300 rounded mt-1"
+              onChange={(e) => {
+                handleChange(e);
+                setRollNoError(false);
+              }}
+              className={`w-full p-2 border ${rollNoError ? 'border-red-500' : 'border-gray-300'} rounded mt-1`}
             />
+            {rollNoError && <p className="text-red-500 text-sm">Roll Number already exists</p>}
           </div>
           <div className="mb-4">
             <label className="block text-gray-700">Parent Name</label>

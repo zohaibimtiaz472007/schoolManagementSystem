@@ -7,6 +7,7 @@ import {
   doc,
   updateDoc,
 } from "firebase/firestore";
+import toast from "react-hot-toast";
 
 const ResultList = () => {
   const [results, setResults] = useState([]);
@@ -45,6 +46,7 @@ const ResultList = () => {
 
   const handleDelete = async (id) => {
     await deleteDoc(doc(db, "results", id));
+    toast.success("Result deleted successfully");
   };
 
   const handleEdit = (result) => {
@@ -57,6 +59,7 @@ const ResultList = () => {
     const totalMarks = Object.values(editData.marks).reduce(
       (acc, mark) => acc + Number(mark),
       0
+     
     );
     const percentage = editData.totalMarks
       ? (totalMarks / editData.totalMarks) * 100
@@ -66,6 +69,7 @@ const ResultList = () => {
       obtainedMarks: totalMarks,
       percentage,
     });
+    toast.success("Result updated successfully");
     setEditingId(null);
   };
 
@@ -235,11 +239,11 @@ const ResultList = () => {
       </div>
       {editingId && (
         <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex justify-center items-center p-4">
-          <div className="bg-white p-4 rounded-lg shadow-lg w-full max-w-lg mx-auto">
+          <div className="bg-white p-4 rounded-lg shadow-lg w-full max-w-lg mx-auto overflow-y-auto max-h-screen">
             <h2 className="text-xl font-bold mb-4">Edit Result</h2>
             <form onSubmit={handleUpdate}>
               <div className="flex flex-wrap mb-4">
-                <label className="block text-gray-700 w-32">Student ID</label>
+                <label className="block text-gray-700 w-full sm:w-32">Student ID</label>
                 <input
                   type="text"
                   name="studentId"
@@ -247,11 +251,11 @@ const ResultList = () => {
                   onChange={(e) =>
                     setEditData({ ...editData, studentId: e.target.value })
                   }
-                  className="flex-grow px-3 py-2 border rounded "
+                  className="flex-grow px-3 py-2 border rounded w-full sm:w-auto"
                 />
               </div>
               <div className="flex flex-wrap mb-4">
-                <label className="block text-gray-700 w-32">Class</label>
+                <label className="block text-gray-700 w-full sm:w-32">Class</label>
                 <input
                   type="text"
                   name="class"
@@ -259,30 +263,13 @@ const ResultList = () => {
                   onChange={(e) =>
                     setEditData({ ...editData, class: e.target.value })
                   }
-                  className="flex-grow px-3 py-2 border rounded"
-                />
-              </div>
-              <div className="flex flex-wrap mb-4">
-                <label className="block text-gray-700 w-32">
-                  Total Marks
-                </label>
-                <input
-                  type="number"
-                  name="totalMarks"
-                  value={editData.totalMarks}
-                  onChange={(e) =>
-                    setEditData({
-                      ...editData,
-                      totalMarks: parseInt(e.target.value),
-                    })
-                  }
-                  className="flex-grow px-3 py-2 border rounded"
+                  className="flex-grow px-3 py-2 border rounded w-full sm:w-auto"
                 />
               </div>
               {Object.keys(editData.marks).map((subject) => (
                 <div key={subject} className="flex flex-wrap mb-4">
-                  <label className="block text-gray-700 w-32">
-                    {subject.charAt(0).toUpperCase() + subject.slice(1)}
+                  <label className="block text-gray-700 w-full sm:w-32 capitalize">
+                    {subject}
                   </label>
                   <input
                     type="number"
@@ -293,11 +280,11 @@ const ResultList = () => {
                         ...editData,
                         marks: {
                           ...editData.marks,
-                          [subject]: parseInt(e.target.value),
+                          [subject]: e.target.value,
                         },
                       })
                     }
-                    className="flex-grow px-3 py-2 border rounded"
+                    className="flex-grow px-3 py-2 border rounded w-full sm:w-auto"
                   />
                 </div>
               ))}
@@ -305,13 +292,13 @@ const ResultList = () => {
                 <button
                   type="button"
                   onClick={() => setEditingId(null)}
-                  className="mr-2 px-4 py-2 bg-gray-400 text-white rounded"
+                  className="bg-gray-500 text-white px-4 py-2 rounded mr-2"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-blue-500 text-white rounded"
+                  className="bg-blue-500 text-white px-4 py-2 rounded"
                 >
                   Update
                 </button>
