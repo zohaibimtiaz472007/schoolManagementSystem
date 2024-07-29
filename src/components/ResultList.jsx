@@ -99,11 +99,44 @@ const ResultList = () => {
       ));
   };
 
+  const getGrade = (percentage) => {
+    if (percentage >= 80) return "A+";
+    if (percentage >= 70) return "A";
+    if (percentage >= 60) return "B";
+    if (percentage >= 50) return "C";
+    if (percentage >= 40) return "D";
+    return "Fail";
+  };
+
   return (
     <div className="min-h-screen bg-gray-100 p-6">
+      <style>
+        {`
+        @media print {
+          body {
+            -webkit-print-color-adjust: exact;
+          }
+          .page-break {
+            page-break-after: always;
+          }
+          .print-card-container {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 20px;
+          }
+          .print-card {
+            page-break-inside: avoid;
+            break-inside: avoid;
+          }
+          .print-hide {
+            display: none !important;
+          }
+        }
+      `}
+      </style>
       <div className="max-w-7xl mx-auto">
         <h1 className="text-3xl font-bold mb-6">Result List</h1>
-        <div className="mb-6 flex space-x-4">
+        <div className="mb-6 flex space-x-4 print-hide">
           <input
             type="text"
             placeholder="Search by Student ID"
@@ -121,7 +154,7 @@ const ResultList = () => {
         </div>
         <button
           onClick={handlePrint}
-          className="mb-6 bg-blue-500 text-white px-4 py-2 rounded"
+          className="mb-6 bg-blue-500 text-white px-4 py-2 rounded print-hide"
         >
           Print
         </button>
@@ -131,26 +164,28 @@ const ResultList = () => {
           Object.keys(groupedResults).map((className) => (
             <div key={className} className="mb-6">
               <h2 className="text-2xl font-bold mb-4">Class: {className}</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {groupedResults[className].map((result) => (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 print-card-container">
+                {groupedResults[className].map((result, index) => (
                   <div
                     key={result.id}
-                    className="bg-white p-6 rounded-lg shadow-lg"
+                    className={`bg-white p-6 rounded-lg shadow-lg print-card ${
+                      getGrade(result.percentage) === "Fail" ? "bg-red-500" : ""
+                    } ${index % 3 === 2 ? "page-break" : ""}`}
                   >
                     <div className="flex justify-between items-center mb-4">
                       <h2 className="text-xl font-bold">
-                        Student ID: {result.studentId}
+                        Name: {result.studentId}
                       </h2>
                       <div>
                         <button
                           onClick={() => handleEdit(result)}
-                          className="mr-2 bg-green-500 text-white px-2 py-1 rounded"
+                          className="mr-2 bg-green-500 text-white px-2 py-1 rounded print-hide"
                         >
                           Edit
                         </button>
                         <button
                           onClick={() => handleDelete(result.id)}
-                          className="bg-red-500 text-white px-2 py-1 rounded"
+                          className="bg-red-500 text-white px-2 py-1 rounded print-hide"
                         >
                           Delete
                         </button>
@@ -166,12 +201,22 @@ const ResultList = () => {
                       <h3 className="text-lg font-bold">
                         Percentage: {result.percentage.toFixed(2)}%
                       </h3>
+                      <h3 className="text-lg font-bold">
+                        Grade: {getGrade(result.percentage)}
+                      </h3>
                     </div>
                     <div>
                       <h3 className="text-lg font-bold mb-2">Marks</h3>
                       <div className="grid grid-cols-2 gap-2">
                         {Object.keys(result.marks).map((subject) => (
-                          <div key={subject} className="bg-gray-100 p-2 rounded">
+                          <div
+                            key={subject}
+                            className={`p-2 rounded ${
+                              result.marks[subject] < 33
+                                ? "bg-red-200"
+                                : "bg-gray-100"
+                            }`}
+                          >
                             <p className="text-sm font-semibold">
                               {subject.charAt(0).toUpperCase() +
                                 subject.slice(1)}
@@ -207,35 +252,35 @@ const ResultList = () => {
               </div>
               <div className="flex flex-wrap mb-4">
                 <label className="block text-gray-700 w-32">Class</label>
-                <select
+                <input
+                  type="text"
                   name="class"
                   value={editData.class}
                   onChange={(e) =>
                     setEditData({ ...editData, class: e.target.value })
                   }
                   className="flex-grow px-3 py-2 border rounded"
-                >
-                  <option value="">Select Class</option>
-                  {[
-                    "1st",
-                    "2nd",
-                    "3rd",
-                    "4th",
-                    "5th",
-                    "6th",
-                    "7th",
-                    "8th",
-                    "9th",
-                    "10th",
-                  ].map((cls) => (
-                    <option key={cls} value={cls}>
-                      {cls}
-                    </option>
-                  ))}
-                </select>
+                />
+              </div>
+              <div className="flex flex-wrap mb-4">
+                <label className="block text-gray-700 w-32">
+                  Total Marks
+                </label>
+                <input
+                  type="number"
+                  name="totalMarks"
+                  value={editData.totalMarks}
+                  onChange={(e) =>
+                    setEditData({
+                      ...editData,
+                      totalMarks: parseInt(e.target.value),
+                    })
+                  }
+                  className="flex-grow px-3 py-2 border rounded"
+                />
               </div>
               {Object.keys(editData.marks).map((subject) => (
-                <div className="flex flex-wrap mb-4" key={subject}>
+                <div key={subject} className="flex flex-wrap mb-4">
                   <label className="block text-gray-700 w-32">
                     {subject.charAt(0).toUpperCase() + subject.slice(1)}
                   </label>
@@ -248,7 +293,7 @@ const ResultList = () => {
                         ...editData,
                         marks: {
                           ...editData.marks,
-                          [subject]: e.target.value,
+                          [subject]: parseInt(e.target.value),
                         },
                       })
                     }
@@ -260,13 +305,13 @@ const ResultList = () => {
                 <button
                   type="button"
                   onClick={() => setEditingId(null)}
-                  className="mr-2 bg-gray-300 text-gray-700 px-4 py-2 rounded"
+                  className="mr-2 px-4 py-2 bg-gray-400 text-white rounded"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="bg-blue-500 text-white px-4 py-2 rounded"
+                  className="px-4 py-2 bg-blue-500 text-white rounded"
                 >
                   Update
                 </button>
